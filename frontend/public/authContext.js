@@ -1,0 +1,66 @@
+
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import axios from 'axios';
+
+const AuthContext = createContext();
+
+export function useAuth() {
+  return useContext(AuthContext);
+}
+
+// Set up axios defaults
+axios.defaults.baseURL = 'http://localhost:5000';
+
+export function AuthProvider({ children }) {
+  const [user, setUser] = useState(null);
+  const [userType, setUserType] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    const storedUserType = localStorage.getItem('userType');
+    const storedUser = localStorage.getItem('user');
+
+    if (token && storedUserType && storedUser) {
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      setUser(JSON.parse(storedUser));
+      setUserType(storedUserType);
+    }
+    
+    setLoading(false);
+  }, []);
+
+  const login = (token, userData, type) => {
+    localStorage.setItem('token', token);
+    localStorage.setItem('userType', type);
+    localStorage.setItem('user', JSON.stringify(userData));
+    
+    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    setUser(userData);
+    setUserType(type);
+  };
+
+  const logout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('userType');
+    localStorage.removeItem('user');
+    
+    delete axios.defaults.headers.common['Authorization'];
+    setUser(null);
+    setUserType(null);
+  };
+
+  const value = {
+    user,
+    userType,
+    login,
+    logout,
+    loading
+  };
+
+  return (
+    <AuthContext.Provider value={value}>
+      {!loading && children}
+    </AuthContext.Provider>
+  );
+}
